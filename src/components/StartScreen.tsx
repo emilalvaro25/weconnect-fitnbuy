@@ -15,6 +15,22 @@ interface StartScreenProps {
   onModelFinalized: (modelUrl: string) => void;
 }
 
+const dataURLtoFile = (dataUrl: string, filename: string): File => {
+    const arr = dataUrl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) {
+      throw new Error('Invalid data URL: MIME type could not be determined.');
+    }
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+};
+
 const StartScreen: React.FC<StartScreenProps> = ({ onModelFinalized }) => {
   const [userImageUrl, setUserImageUrl] = useState<string | null>(null);
   const [generatedModelUrl, setGeneratedModelUrl] = useState<string | null>(null);
@@ -56,7 +72,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onModelFinalized }) => {
     const loadInitialImage = async () => {
       setInitialImageLoaded(true);
       // Use the provided image as the starting image for the app.
-      const imageUrl = 'https://raw.githubusercontent.com/emilalvaro25/weconnect-fitnbuy/refs/heads/main/model.png?token=GHSAT0AAAAAADIDS6QBGWHOC7CDUIPSOBRI2GH3SNA';
+      const imageUrl = 'https://raw.githubusercontent.com/emilalvaro25/weconnect-fitnbuy/main/model.png';
       try {
         const response = await fetch(imageUrl);
         if (!response.ok) {
