@@ -1,4 +1,5 @@
 
+
 'use client';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +12,7 @@ import { OutfitLayer, WardrobeItem, SavedOutfit } from '@/types';
 import { ChevronDownIcon, ChevronUpIcon } from '@/components/icons';
 import { defaultWardrobe, defaultAccessories } from '@/wardrobe';
 import Footer from '@/components/Footer';
-import { getFriendlyErrorMessage } from '@/lib/utils';
+import { getFriendlyErrorMessage, resizeImage } from '@/lib/utils';
 import Spinner from '@/components/Spinner';
 import SavedOutfitsPanel from '@/components/SavedOutfitsPanel';
 
@@ -262,25 +263,55 @@ const App: React.FC = () => {
     }
   }, [currentPoseIndex, outfitHistory, isLoading, currentOutfitIndex]);
 
-  const handleSaveOutfit = () => {
+  const handleSaveOutfit = async () => {
     if (!displayImageUrl || activeOutfitLayers.length <= 1) {
       return;
     }
 
-    const newOutfit: SavedOutfit = {
-      id: Date.now(),
-      name: `Style ${savedOutfits.length + 1}`,
-      previewImageUrl: displayImageUrl,
-      layers: activeOutfitLayers,
-    };
+    setIsLoading(true);
+    setLoadingMessage('Saving outfit...');
+    setError(null);
 
-    const updatedOutfits = [...savedOutfits, newOutfit];
-    setSavedOutfits(updatedOutfits);
     try {
+      // 1. Resize preview image to a thumbnail
+      const previewImageUrl = await resizeImage(displayImageUrl, 200, 300);
+
+      // 2. Prune layers data to only save one essential pose per layer
+      const layersToSave = activeOutfitLayers.map(layer => {
+          const defaultPose = POSE_INSTRUCTIONS[0];
+          const imageToKeep = layer.poseImages[defaultPose] ?? Object.values(layer.poseImages)[0];
+
+          if (!imageToKeep) {
+              throw new Error(`Could not find an image to save for layer: ${layer.garment?.name || 'Base Model'}`);
+          }
+          
+          return {
+              ...layer,
+              poseImages: { [defaultPose]: imageToKeep }
+          };
+      });
+
+      const newOutfit: SavedOutfit = {
+        id: Date.now(),
+        name: `Style ${savedOutfits.length + 1}`,
+        previewImageUrl: previewImageUrl,
+        layers: layersToSave,
+      };
+
+      const updatedOutfits = [...savedOutfits, newOutfit];
+      setSavedOutfits(updatedOutfits);
+      
       localStorage.setItem('savedOutfits', JSON.stringify(updatedOutfits));
+
     } catch (error) {
       console.error("Failed to save outfit to localStorage", error);
-      setError("Could not save outfit. Your browser's storage might be full.");
+       const errorMessage = error instanceof Error && (error.name === 'QuotaExceededError' || error.message.includes('quota'))
+        ? "Could not save outfit. Your browser's storage is full. Please delete some saved outfits."
+        : getFriendlyErrorMessage(error, "Could not save outfit");
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage('');
     }
   };
 
