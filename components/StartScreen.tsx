@@ -56,14 +56,14 @@ const StartScreen: React.FC<StartScreenProps> = ({ onModelFinalized }) => {
     const loadInitialImage = async () => {
       setInitialImageLoaded(true);
       // Use the provided image as the starting image for the app.
-      const imageUrl = 'https://i.imgur.com/8L44B7H.jpeg';
+      const imageUrl = 'https://raw.githubusercontent.com/emilalvaro25/weconnect-fitnbuy/refs/heads/main/model.png?token=GHSAT0AAAAAADIDS6QBGWHOC7CDUIPSOBRI2GH3SNA';
       try {
         const response = await fetch(imageUrl);
         if (!response.ok) {
           throw new Error(`Failed to fetch initial image: ${response.statusText}`);
         }
         const blob = await response.blob();
-        const file = new File([blob], 'initial-model.jpeg', { type: blob.type });
+        const file = new File([blob], 'initial-model.png', { type: blob.type });
         await handleFileSelect(file);
       } catch (err) {
         console.error("Failed to load initial image:", err);
@@ -85,6 +85,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onModelFinalized }) => {
     setGeneratedModelUrl(null);
     setIsGenerating(false);
     setError(null);
+    setInitialImageLoaded(false); // Allow reloading the initial image if they reset
   };
 
   const screenVariants = {
